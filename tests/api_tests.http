@@ -1,0 +1,82 @@
+### Переменные (будут автоматически подставлены)
+@baseUrl = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImNvb3JkaW5hdG9yQGZ1ZWwucnUiLCJyb2xlIjoiY29vcmRpbmF0b3IiLCJleHAiOjE3NzIzODYxNTcsIm5iZiI6MTc3MjI5OTc1NywiaWF0IjoxNzcyMjk5NzU3fQ.XtXIm9heIc53AjbbuvKDeKSQYqI9hzG74fgeOmrETO0
+
+### 1. Health check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 2. Логин координатора
+# @name login
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "email": "coordinator@fuel.ru",
+  "password": "password123"
+}
+
+### 3. Сохраняем токен из ответа (выполни после логина)
+# Скопируй token из ответа выше и вставь в переменную @token в начале файла
+
+### 4. Получить текущего пользователя
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{token}}
+
+### 5. Получить всех пользователей (только для координатора)
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+
+### 6. Получить ТМ (для эксперта)
+GET {{baseUrl}}/api/tms
+Authorization: Bearer {{token}}
+
+### 7. Создать нового ТМ (только для координатора)
+POST {{baseUrl}}/api/users/register
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "new_tm@fuel.ru",
+  "password": "password123",
+  "role": "tm",
+  "fio": "Новый Территориальный Менеджер",
+  "cluster_name": "Центральный",
+  "azs_count": 6
+}
+
+### 8. Обновить пользователя (только для координатора)
+PUT {{baseUrl}}/api/users/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "fio": "Обновленное ФИО",
+  "cluster_name": "Новый кластер"
+}
+
+### 9. Удалить пользователя (только для координатора)
+DELETE {{baseUrl}}/api/users/3
+Authorization: Bearer {{token}}
+
+### 10. Обновить токен
+POST {{baseUrl}}/api/users/refresh
+Authorization: Bearer {{token}}
+
+### 11. Логин эксперта
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "email": "expert@fuel.ru",
+  "password": "password123"
+}
+
+### 12. Логин ТМ
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "email": "new_tm@fuel.ru",
+  "password": "password123"
+}

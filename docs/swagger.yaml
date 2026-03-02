@@ -1,0 +1,23 @@
+basePath: /api
+host: localhost:8080
+info:
+  contact:
+    email: support@fuel.ru
+    name: API Support
+    url: http://fuel.ru/support
+  description: API для программы лояльности "Топливный Альянс"
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Fuel Points API
+  version: "1.0"
+paths: {}
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
