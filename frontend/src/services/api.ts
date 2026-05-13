@@ -1,9 +1,7 @@
 import axios from 'axios';
 
 // URL бэкенда в продакшене и разработке
-const API_URL = import.meta.env.PROD
-    ? 'https://fuel-points-api.onrender.com/api'  // ← после деплоя бэкенда, замени на свой URL
-    : 'http://localhost:8080/api';
+const API_URL = 'https://fuel-loyality-worker-points.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_URL,
