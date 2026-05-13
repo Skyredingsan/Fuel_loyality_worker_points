@@ -25,7 +25,6 @@ export const EnterResults: React.FC = () => {
     const [editingId, setEditingId] = useState<number | null>(null);
 
     useEffect(() => {
-        // Проверяем URL на наличие параметра edit
         const params = new URLSearchParams(window.location.search);
         const editId = params.get('edit');
 
@@ -41,13 +40,12 @@ export const EnterResults: React.FC = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            // Загружаем список ТМ и индикаторы
             const [tmsData, indicatorsData] = await Promise.all([
                 userService.getTMs(),
                 kpiService.getAllIndicators()
             ]);
-            setTms(tmsData);
-            setIndicators(indicatorsData);
+            setTms(Array.isArray(tmsData) ? tmsData : []);
+            setIndicators(Array.isArray(indicatorsData) ? indicatorsData : []);
         } catch (error) {
             console.error('Failed to load data:', error);
             setMessage({ type: 'error', text: 'Ошибка загрузки данных' });
@@ -60,7 +58,6 @@ export const EnterResults: React.FC = () => {
         try {
             setLoading(true);
 
-            // Загружаем список ТМ и индикаторы
             const [tmsData, indicatorsData, result] = await Promise.all([
                 userService.getTMs(),
                 kpiService.getAllIndicators(),
@@ -68,23 +65,22 @@ export const EnterResults: React.FC = () => {
             ]);
 
             console.log('Editing result:', result);
-            setTms(tmsData);
-            setIndicators(indicatorsData);
+            setTms(Array.isArray(tmsData) ? tmsData : []);
+            setIndicators(Array.isArray(indicatorsData) ? indicatorsData : []);
 
-            // Устанавливаем выбранного ТМ
             setSelectedTM(result.user_id);
-
-            // Устанавливаем период
             setPeriod(result.period);
 
-            // Заполняем результаты
             const loadedResults: Record<string, { value: string; fileUrl?: string }> = {};
-            result.indicators.forEach((ind: any) => {
-                loadedResults[ind.indicator.code] = {
-                    value: ind.fact_value?.toString() || '',
-                    fileUrl: ind.supporting_document_url
-                };
-            });
+            // Безопасная проверка indicators
+            if (result.indicators && Array.isArray(result.indicators)) {
+                result.indicators.forEach((ind: any) => {
+                    loadedResults[ind.indicator.code] = {
+                        value: ind.fact_value?.toString() || '',
+                        fileUrl: ind.supporting_document_url
+                    };
+                });
+            }
             setResults(loadedResults);
 
         } catch (error) {
@@ -113,7 +109,6 @@ export const EnterResults: React.FC = () => {
 
         try {
             setUploading(prev => ({ ...prev, [indicatorCode]: true }));
-
             const fileUrl = await uploadService.uploadFile(file, 'indicator_result', indicatorCode);
 
             setResults(prev => ({
@@ -124,7 +119,6 @@ export const EnterResults: React.FC = () => {
                     fileUrl
                 }
             }));
-
             setMessage({ type: 'success', text: 'Файл загружен' });
         } catch (error) {
             console.error('Failed to upload file:', error);
@@ -160,7 +154,6 @@ export const EnterResults: React.FC = () => {
             }
 
             if (isEditing && editingId) {
-                // Обновляем существующий результат
                 await resultsService.updateResults(editingId, {
                     user_id: Number(selectedTM),
                     period: period,
@@ -168,7 +161,6 @@ export const EnterResults: React.FC = () => {
                 });
                 setMessage({ type: 'success', text: 'Результаты успешно обновлены' });
             } else {
-                // Создаем новый результат
                 await resultsService.enterResults({
                     user_id: Number(selectedTM),
                     period: period,
@@ -177,7 +169,6 @@ export const EnterResults: React.FC = () => {
                 setMessage({ type: 'success', text: 'Результаты успешно сохранены' });
             }
 
-            // Очищаем форму если это не редактирование
             if (!isEditing) {
                 setResults({});
             }
@@ -193,7 +184,8 @@ export const EnterResults: React.FC = () => {
         }
     };
 
-    const groupedIndicators = indicators.reduce((acc, ind) => {
+    // Безопасная группировка индикаторов
+    const groupedIndicators = (Array.isArray(indicators) ? indicators : []).reduce((acc, ind) => {
         const category = ind.category_code || 'Другое';
         if (!acc[category]) {
             acc[category] = [];
@@ -225,7 +217,6 @@ export const EnterResults: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Выбор ТМ и периода */}
                 <div className="bg-white p-6 rounded-lg shadow">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -237,10 +228,10 @@ export const EnterResults: React.FC = () => {
                                 onChange={(e) => setSelectedTM(e.target.value ? Number(e.target.value) : '')}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 required
-                                disabled={isEditing} // При редактировании нельзя изменить ТМ
+                                disabled={isEditing}
                             >
                                 <option value="">Выберите ТМ</option>
-                                {tms.map(tm => (
+                                {(Array.isArray(tms) ? tms : []).map(tm => (
                                     <option key={tm.id} value={tm.id}>
                                         {tm.fio} ({tm.cluster_name || 'нет кластера'})
                                     </option>
@@ -267,7 +258,6 @@ export const EnterResults: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Показатели по категориям */}
                 {Object.entries(groupedIndicators).map(([category, cats]) => (
                     <div key={category} className="bg-white p-6 rounded-lg shadow">
                         <h2 className="text-lg font-semibold mb-4">
@@ -307,10 +297,7 @@ export const EnterResults: React.FC = () => {
                                                 <input
                                                     type="file"
                                                     id={`file-${indicator.code}`}
-                                                    onChange={(e) => handleFileChange(
-                                                        indicator.code,
-                                                        e.target.files?.[0]
-                                                    )}
+                                                    onChange={(e) => handleFileChange(indicator.code, e.target.files?.[0])}
                                                     className="hidden"
                                                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
                                                 />
@@ -320,80 +307,33 @@ export const EnterResults: React.FC = () => {
                                                         results[indicator.code]?.file ? 'bg-green-50 border-green-300' : ''
                                                     }`}
                                                 >
-                                                    {uploading[indicator.code] ? (
-                                                        <span className="flex items-center">
-                              <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                              Загрузка...
-                            </span>
-                                                    ) : (
-                                                        <span className="flex items-center">
-                              <span className="mr-2">📎</span>
-                                                            {results[indicator.code]?.file ? 'Файл выбран' : 'Выбрать файл'}
-                            </span>
-                                                    )}
+                                                    {uploading[indicator.code] ? '⏳ Загрузка...' : '📎 Выбрать файл'}
                                                 </label>
                                                 {results[indicator.code]?.file && (
                                                     <button
                                                         type="button"
                                                         onClick={() => handleFileChange(indicator.code, undefined)}
                                                         className="text-red-600 hover:text-red-800"
-                                                        title="Удалить файл"
                                                     >
                                                         ✕
                                                     </button>
                                                 )}
                                             </div>
-                                            {results[indicator.code]?.file && (
-                                                <div className="mt-1 text-xs text-gray-500">
-                                                    {results[indicator.code].file?.name}
-                                                </div>
-                                            )}
-                                            {results[indicator.code]?.fileUrl && !results[indicator.code]?.file && (
-                                                <div className="mt-1 text-xs text-blue-600">
-                                                    <a
-                                                        href={`http://localhost:8080${results[indicator.code].fileUrl}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="hover:underline"
-                                                    >
-                                                        📎 Текущий файл
-                                                    </a>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
-                                    {indicator.base_value !== undefined && indicator.indicator_type === 'base' && (
-                                        <div className="text-xs text-gray-500 ml-1">
-                                            Цель: {indicator.base_value}{indicator.unit} (вес: {indicator.base_weight})
-                                        </div>
-                                    )}
                                 </div>
                             ))}
                         </div>
                     </div>
                 ))}
 
-                {/* Кнопка сохранения */}
                 <div className="flex justify-end">
                     <button
                         type="submit"
                         disabled={saving || !selectedTM}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center"
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
                     >
-                        {saving ? (
-                            <>
-                                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                {isEditing ? 'Обновление...' : 'Сохранение...'}
-                            </>
-                        ) : (
-                            isEditing ? 'Обновить результаты' : 'Сохранить результаты'
-                        )}
+                        {saving ? 'Сохранение...' : (isEditing ? 'Обновить результаты' : 'Сохранить результаты')}
                     </button>
                 </div>
             </form>
