@@ -131,14 +131,11 @@ func main() {
 		),
 	).Methods("GET", "OPTIONS")
 
-	api.HandleFunc("/users/register", authHandler.Register).Methods("POST")
-	/*
-		api.Handle("/users/register",
-			authMiddleware.RequireRole("coordinator")(
-				http.HandlerFunc(authHandler.Register),
-			),
-		).Methods("POST", "OPTIONS")
-	*/
+	api.Handle("/users/register",
+		authMiddleware.RequireRole("coordinator")(
+			http.HandlerFunc(authHandler.Register),
+		),
+	).Methods("POST", "OPTIONS")
 
 	api.Handle("/users/{id}",
 		authMiddleware.RequireRole("coordinator")(
