@@ -10,8 +10,8 @@ export const KPIEditor: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    // Форма для создания/редактирования
     const [formData, setFormData] = useState({
         code: '',
         name: '',
@@ -36,10 +36,11 @@ export const KPIEditor: React.FC = () => {
                 kpiService.getAllIndicators(),
                 kpiService.getCategories()
             ]);
-            setIndicators(indicatorsData);
-            setCategories(categoriesData);
+            setIndicators(Array.isArray(indicatorsData) ? indicatorsData : []);
+            setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         } catch (error) {
             console.error('Failed to load KPI data:', error);
+            setMessage({ type: 'error', text: 'Ошибка загрузки данных' });
         } finally {
             setLoading(false);
         }
@@ -96,7 +97,6 @@ export const KPIEditor: React.FC = () => {
                 indicator_type: formData.indicator_type,
             };
 
-            // Добавляем веса в зависимости от типа
             if (formData.indicator_type === 'base') {
                 data.base_value = parseFloat(formData.base_value) || 0;
                 data.base_weight = parseInt(formData.base_weight) || 0;
@@ -108,16 +108,19 @@ export const KPIEditor: React.FC = () => {
 
             if (editingId) {
                 await kpiService.updateIndicator(editingId, data);
+                setMessage({ type: 'success', text: 'Показатель обновлён' });
             } else {
                 await kpiService.createIndicator(data);
+                setMessage({ type: 'success', text: 'Показатель создан' });
             }
 
             await loadData();
             setShowModal(false);
             resetForm();
+            setTimeout(() => setMessage(null), 3000);
         } catch (error) {
             console.error('Failed to save indicator:', error);
-            alert('Ошибка при сохранении показателя');
+            setMessage({ type: 'error', text: 'Ошибка при сохранении показателя' });
         }
     };
 
@@ -126,15 +129,16 @@ export const KPIEditor: React.FC = () => {
             try {
                 await kpiService.deleteIndicator(id);
                 await loadData();
+                setMessage({ type: 'success', text: 'Показатель удалён' });
+                setTimeout(() => setMessage(null), 3000);
             } catch (error) {
                 console.error('Failed to delete indicator:', error);
-                alert('Ошибка при удалении показателя');
+                setMessage({ type: 'error', text: 'Ошибка при удалении показателя' });
             }
         }
     };
 
-    // Фильтрация показателей
-    const filteredIndicators = indicators.filter(ind => {
+    const filteredIndicators = (Array.isArray(indicators) ? indicators : []).filter(ind => {
         const matchesCategory = selectedCategory === 'all' || ind.category_code === selectedCategory;
         const matchesSearch =
             ind.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -142,7 +146,6 @@ export const KPIEditor: React.FC = () => {
         return matchesCategory && matchesSearch;
     });
 
-    // Группировка по категориям для отображения
     const indicatorsByCategory = filteredIndicators.reduce((acc, ind) => {
         const cat = ind.category_code || 'Другое';
         if (!acc[cat]) acc[cat] = [];
@@ -178,7 +181,6 @@ export const KPIEditor: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            {/* Заголовок и кнопка создания */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h1 className="text-2xl font-bold">Управление KPI</h1>
                 <button
@@ -193,7 +195,14 @@ export const KPIEditor: React.FC = () => {
                 </button>
             </div>
 
-            {/* Фильтры */}
+            {message && (
+                <div className={`p-4 rounded-lg ${
+                    message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                }`}>
+                    {message.text}
+                </div>
+            )}
+
             <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                     <input
@@ -211,20 +220,19 @@ export const KPIEditor: React.FC = () => {
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="all">Все категории</option>
-                        {categories.map(cat => (
+                        {(Array.isArray(categories) ? categories : []).map(cat => (
                             <option key={cat.id} value={cat.code}>{cat.name}</option>
                         ))}
                     </select>
                 </div>
             </div>
 
-            {/* Список показателей по категориям */}
             <div className="space-y-6">
                 {Object.entries(indicatorsByCategory).map(([categoryCode, cats]) => (
                     <div key={categoryCode} className="bg-white rounded-lg shadow overflow-hidden">
                         <div className="bg-gray-50 px-4 py-3 border-b">
                             <h2 className="font-semibold text-lg">
-                                {categories.find(c => c.code === categoryCode)?.name || categoryCode}
+                                {(Array.isArray(categories) ? categories : []).find(c => c.code === categoryCode)?.name || categoryCode}
                             </h2>
                         </div>
                         <div className="overflow-x-auto">
@@ -291,7 +299,7 @@ export const KPIEditor: React.FC = () => {
                 ))}
             </div>
 
-            {/* Модальное окно создания/редактирования */}
+            {/* Модальное окно */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -301,26 +309,20 @@ export const KPIEditor: React.FC = () => {
                             </h2>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Основная информация */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Код *
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Код *</label>
                                         <input
                                             type="text"
                                             name="code"
                                             value={formData.code}
                                             onChange={handleInputChange}
                                             required
-                                            placeholder="ПМ1"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Категория *
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Категория *</label>
                                         <select
                                             name="category_code"
                                             value={formData.category_code}
@@ -328,7 +330,7 @@ export const KPIEditor: React.FC = () => {
                                             required
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
-                                            {categories.map(cat => (
+                                            {(Array.isArray(categories) ? categories : []).map(cat => (
                                                 <option key={cat.id} value={cat.code}>{cat.name}</option>
                                             ))}
                                         </select>
@@ -336,9 +338,7 @@ export const KPIEditor: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Название *
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Название *</label>
                                     <input
                                         type="text"
                                         name="name"
@@ -350,9 +350,7 @@ export const KPIEditor: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Описание
-                                    </label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
                                     <textarea
                                         name="description"
                                         value={formData.description}
@@ -362,12 +360,9 @@ export const KPIEditor: React.FC = () => {
                                     />
                                 </div>
 
-                                {/* Тип и единицы измерения */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Тип показателя *
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Тип *</label>
                                         <select
                                             name="indicator_type"
                                             value={formData.indicator_type}
@@ -381,9 +376,7 @@ export const KPIEditor: React.FC = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Единица измерения *
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Единица измерения *</label>
                                         <select
                                             name="unit"
                                             value={formData.unit}
@@ -398,13 +391,10 @@ export const KPIEditor: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Поля в зависимости от типа */}
                                 {formData.indicator_type === 'base' && (
                                     <div className="grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Целевое значение *
-                                            </label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Целевое значение *</label>
                                             <input
                                                 type="number"
                                                 name="base_value"
@@ -416,9 +406,7 @@ export const KPIEditor: React.FC = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Вес баллов *
-                                            </label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Вес баллов *</label>
                                             <input
                                                 type="number"
                                                 name="base_weight"
@@ -433,9 +421,7 @@ export const KPIEditor: React.FC = () => {
 
                                 {formData.indicator_type === 'extra' && (
                                     <div className="bg-green-50 p-4 rounded-lg">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Вес за единицу *
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Вес за единицу *</label>
                                         <input
                                             type="number"
                                             name="extra_weight"
@@ -449,9 +435,7 @@ export const KPIEditor: React.FC = () => {
 
                                 {formData.indicator_type === 'penalty' && (
                                     <div className="bg-red-50 p-4 rounded-lg">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Штраф за единицу *
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Штраф за единицу *</label>
                                         <input
                                             type="number"
                                             name="penalty_weight"
@@ -463,7 +447,6 @@ export const KPIEditor: React.FC = () => {
                                     </div>
                                 )}
 
-                                {/* Кнопки */}
                                 <div className="flex justify-end space-x-3 pt-4">
                                     <button
                                         type="button"
