@@ -13,6 +13,7 @@ export const Reports: React.FC = () => {
     });
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    console.log(users)
 
     // Состояния для отклонения
     const [showRejectModal, setShowRejectModal] = useState(false);

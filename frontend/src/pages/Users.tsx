@@ -77,7 +77,7 @@ export const Users: React.FC = () => {
                     email: formData.email,
                     fio: formData.fio,
                     role: formData.role,
-                    cluster_name: formData.cluster_name || null,
+                    cluster_name: formData.cluster_name || undefined,
                     azs_count: formData.azs_count
                 });
             } else {

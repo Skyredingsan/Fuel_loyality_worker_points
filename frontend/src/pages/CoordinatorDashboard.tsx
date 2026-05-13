@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 
 export const CoordinatorDashboard: React.FC = () => {
     const { user } = useAuth();
+    console.log(user);
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalTMs: 0,

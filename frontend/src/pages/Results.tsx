@@ -7,6 +7,7 @@ import type { FullResultSummary, CategorySummary, KPIIndicator, IndicatorResult 
 
 export const Results: React.FC = () => {
     const { user } = useAuth();
+    console.log(user);
     const [summary, setSummary] = useState<FullResultSummary | null>(null);
     const [indicators, setIndicators] = useState<KPIIndicator[]>([]);
     const [loading, setLoading] = useState(true);

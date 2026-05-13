@@ -8,6 +8,7 @@ import type { User, KPIIndicator, IndicatorResultInput } from '../types';
 
 export const EnterResults: React.FC = () => {
     const { user } = useAuth();
+    console.log(user);
     const [tms, setTms] = useState<User[]>([]);
     const [indicators, setIndicators] = useState<KPIIndicator[]>([]);
     const [selectedTM, setSelectedTM] = useState<number | ''>('');

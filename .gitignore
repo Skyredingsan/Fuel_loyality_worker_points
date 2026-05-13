@@ -80,7 +80,6 @@ Icon
 
 # Файлы сборки Go
 go.sum
-vendor/
 
 # Файлы сборки frontend
 frontend/dist/
