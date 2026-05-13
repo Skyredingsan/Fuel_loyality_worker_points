@@ -43,21 +43,23 @@ export const CoordinatorDashboard: React.FC = () => {
             const results = await resultsService.getAllResults(period);
             console.log('Results loaded:', results);
 
-            // Считаем статистику с проверкой на пустые данные
-            const tmsWithResults = new Set(results.map((r: any) => r.user_id)).size;
+            // Гарантируем, что results — это массив
+            const safeResults = Array.isArray(results) ? results : [];
+
+            // Считаем статистику
+            const tmsWithResults = new Set(safeResults.map((r: any) => r.user_id)).size;
 
             let totalPoints = 0;
             let maxPoints = 0;
 
-            // Безопасное вычисление баллов
-            results.forEach((r: any) => {
+            safeResults.forEach((r: any) => {
                 const points = r.indicators?.reduce((acc: number, ind: any) =>
                     acc + (ind.calculated_points || 0), 0) || 0;
                 totalPoints += points;
                 maxPoints = Math.max(maxPoints, points);
             });
 
-            const pendingCount = results.filter((r: any) => r.status === 'draft').length;
+            const pendingCount = safeResults.filter((r: any) => r.status === 'draft').length;
 
             setStats({
                 totalUsers: users.length,
@@ -65,13 +67,13 @@ export const CoordinatorDashboard: React.FC = () => {
                 totalExperts: experts.length,
                 tmsWithResults,
                 totalPoints,
-                averagePoints: results.length ? Math.round(totalPoints / results.length) : 0,
+                averagePoints: safeResults.length ? Math.round(totalPoints / safeResults.length) : 0,
                 maxPoints,
                 pendingResults: pendingCount
             });
 
             // Берем последние 5 результатов (сортировка по дате)
-            const sorted = [...results].sort((a, b) =>
+            const sorted = [...safeResults].sort((a, b) =>
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
             setRecentResults(sorted.slice(0, 5));
@@ -79,6 +81,8 @@ export const CoordinatorDashboard: React.FC = () => {
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
             setMessage({ type: 'error', text: 'Ошибка загрузки данных' });
+            // Устанавливаем пустой массив при ошибке
+            setRecentResults([]);
         } finally {
             setLoading(false);
         }
@@ -248,7 +252,6 @@ export const CoordinatorDashboard: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y">
                                 {recentResults.map((result: any) => {
-                                    // Безопасное вычисление баллов
                                     const totalPoints = result.indicators?.reduce(
                                         (sum: number, ind: any) => sum + (ind.calculated_points || 0), 0
                                     ) || 0;
