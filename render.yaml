@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: fuel-points-api
+    name: fuel-loyality-worker-points
     runtime: go
-    buildCommand: go build -o fuel-points cmd/api/main.go
-    startCommand: ./fuel-points
+    buildCommand: go build -mod=vendor -o fuel-points cmd/api/main.go
+    startCommand: go run scripts/ensure_users.go && ./fuel-points
     envVars:
       - key: DB_PATH
-        value: /opt/render/project/src/data/fuel-points.db
+        value: ./data/fuel-points.db
       - key: SERVER_PORT
         value: 8080
     disk:
