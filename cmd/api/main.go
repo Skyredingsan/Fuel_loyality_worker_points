@@ -18,10 +18,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
-
-	_ "fuel-points/docs"
-
-	"github.com/swaggo/http-swagger"
+	//_ "fuel-points/docs"
 )
 
 func main() {
@@ -88,12 +85,15 @@ func main() {
 	router.HandleFunc("/api/login", authHandler.Login).Methods("POST", "OPTIONS")
 
 	// Swagger документация
-	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
-		httpSwagger.DeepLinking(true),
-		httpSwagger.DocExpansion("none"),
-		httpSwagger.DomID("swagger-ui"),
-	))
+	/*
+		router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+
+			httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+			httpSwagger.DeepLinking(true),
+			httpSwagger.DocExpansion("none"),
+			httpSwagger.DomID("swagger-ui"),
+		))
+	*/
 
 	// Защищенные API маршруты
 	api := router.PathPrefix("/api").Subrouter()
