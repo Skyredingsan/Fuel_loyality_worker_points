@@ -1,35 +1,81 @@
 import axios from 'axios';
 
-// Убедись что URL правильный
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-
-console.log('API URL:', API_URL); // Добавь для отладки
+// URL бэкенда в продакшене и разработке
+const API_URL = import.meta.env.PROD
+    ? 'https://fuel-points-api.onrender.com/api'  // ← после деплоя бэкенда, замени на свой URL
+    : 'http://localhost:8080/api';
 
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 30000, // 30 секунд таймаут (на случай медленного ответа)
 });
 
-// Добавляем токен к каждому запросу
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+// Интерсептор: добавляем токен к каждому запросу
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Для отладки в продакшене (можно убрать после настройки)
+        if (import.meta.env.DEV) {
+            console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+        }
+
+        return config;
+    },
+    (error) => {
+        console.error('[API] Request error:', error);
+        return Promise.reject(error);
     }
-    console.log('Request:', config.method?.toUpperCase(), config.url); // Добавь логи
-    return config;
-});
+);
 
-// Обработка ошибок
+// Интерсептор: обработка ошибок ответа
 api.interceptors.response.use(
     (response) => {
-        console.log('Response:', response.status, response.config.url); // Добавь логи
+        // Успешный ответ
         return response;
     },
     (error) => {
-        console.error('API Error:', error.response?.status, error.response?.data); // Подробный лог ошибок
+        // Ошибка от сервера
+        if (error.response) {
+            // Сервер ответил с ошибкой
+            const { status, data } = error.response;
+
+            console.error(`[API] Error ${status}:`, data);
+
+            // Если 401 Unauthorized -> токен истек или невалидный
+            if (status === 401) {
+                console.warn('[API] Token expired or invalid, logging out...');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+
+                // Не редиректим на /login, если уже на странице логина
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
+            }
+
+            // Если 403 Forbidden -> недостаточно прав
+            if (status === 403) {
+                console.warn('[API] Access forbidden:', data?.message || 'No permission');
+            }
+
+            return Promise.reject(error);
+        }
+
+        // Ошибка сети (сервер не отвечает)
+        if (error.request) {
+            console.error('[API] Network error - no response from server:', error.request);
+            return Promise.reject(new Error('Сервер не отвечает. Проверьте подключение.'));
+        }
+
+        // Другие ошибки
+        console.error('[API] Unknown error:', error.message);
         return Promise.reject(error);
     }
 );

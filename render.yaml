@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: fuel-points-api
+    runtime: go
+    buildCommand: go build -o fuel-points cmd/api/main.go
+    startCommand: ./fuel-points
+    envVars:
+      - key: DB_PATH
+        value: /opt/render/project/src/data/fuel-points.db
+      - key: SERVER_PORT
+        value: 8080
+    disk:
+      name: data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
