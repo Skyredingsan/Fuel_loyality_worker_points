@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom';
 
 export const CoordinatorDashboard: React.FC = () => {
     const { user } = useAuth();
-    console.log(user);
+    console.log('Current user:', user);
+
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalTMs: 0,
@@ -40,22 +41,21 @@ export const CoordinatorDashboard: React.FC = () => {
 
             // Получаем результаты за период
             const results = await resultsService.getAllResults(period);
-            console.log('Results loaded:', results); // Для отладки
+            console.log('Results loaded:', results);
 
-            // Считаем статистику
+            // Считаем статистику с проверкой на пустые данные
             const tmsWithResults = new Set(results.map((r: any) => r.user_id)).size;
-            const totalPoints = results.reduce((sum: number, r: any) => {
-                // Суммируем баллы из детальных результатов
-                const points = r.indicators?.reduce((acc: number, ind: any) =>
-                    acc + (ind.calculated_points || 0), 0) || 0;
-                return sum + points;
-            }, 0);
 
-            const maxPoints = results.reduce((max: number, r: any) => {
+            let totalPoints = 0;
+            let maxPoints = 0;
+
+            // Безопасное вычисление баллов
+            results.forEach((r: any) => {
                 const points = r.indicators?.reduce((acc: number, ind: any) =>
                     acc + (ind.calculated_points || 0), 0) || 0;
-                return Math.max(max, points);
-            }, 0);
+                totalPoints += points;
+                maxPoints = Math.max(maxPoints, points);
+            });
 
             const pendingCount = results.filter((r: any) => r.status === 'draft').length;
 
@@ -93,8 +93,6 @@ export const CoordinatorDashboard: React.FC = () => {
             await resultsService.confirmResults(resultId);
             await loadData();
             setMessage({ type: 'success', text: 'Результаты подтверждены' });
-
-            // Скрываем сообщение через 3 секунды
             setTimeout(() => setMessage(null), 3000);
         } catch (error) {
             console.error('Failed to confirm results:', error);
@@ -111,7 +109,7 @@ export const CoordinatorDashboard: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Панель координатора</h1>
                 <div className="flex items-center space-x-2">
@@ -235,59 +233,61 @@ export const CoordinatorDashboard: React.FC = () => {
                     </Link>
                 </div>
                 <div className="p-6">
-                    {recentResults.length > 0 ? (
-                        <table className="w-full">
-                            <thead>
-                            <tr className="text-xs text-gray-500 uppercase">
-                                <th className="text-left pb-2">ТМ</th>
-                                <th className="text-left pb-2">Эксперт</th>
-                                <th className="text-center pb-2">Баллы</th>
-                                <th className="text-center pb-2">Статус</th>
-                                <th className="text-center pb-2">Действия</th>
-                                <th className="text-right pb-2">Дата</th>
-                            </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                            {recentResults.map((result: any) => {
-                                // Считаем общие баллы
-                                const totalPoints = result.indicators?.reduce(
-                                    (sum: number, ind: any) => sum + (ind.calculated_points || 0), 0
-                                ) || 0;
+                    {recentResults && recentResults.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                <tr className="text-xs text-gray-500 uppercase border-b">
+                                    <th className="text-left pb-2">ТМ</th>
+                                    <th className="text-left pb-2">Эксперт</th>
+                                    <th className="text-center pb-2">Баллы</th>
+                                    <th className="text-center pb-2">Статус</th>
+                                    <th className="text-center pb-2">Действия</th>
+                                    <th className="text-right pb-2">Дата</th>
+                                </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                {recentResults.map((result: any) => {
+                                    // Безопасное вычисление баллов
+                                    const totalPoints = result.indicators?.reduce(
+                                        (sum: number, ind: any) => sum + (ind.calculated_points || 0), 0
+                                    ) || 0;
 
-                                return (
-                                    <tr key={result.id}>
-                                        <td className="py-2">{result.user?.fio || '—'}</td>
-                                        <td className="py-2">{result.expert?.fio || '—'}</td>
-                                        <td className="py-2 text-center font-bold">{totalPoints}</td>
-                                        <td className="py-2 text-center">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                            result.status === 'confirmed'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {result.status === 'confirmed' ? 'Подтверждено' : 'Черновик'}
-                        </span>
-                                        </td>
-                                        <td className="py-2 text-center">
-                                            {result.status !== 'confirmed' && (
-                                                <button
-                                                    onClick={() => handleConfirm(result.id)}
-                                                    className="bg-green-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-green-600 transition"
-                                                >
-                                                    Подтвердить
-                                                </button>
-                                            )}
-                                        </td>
-                                        <td className="py-2 text-right text-sm text-gray-500">
-                                            {new Date(result.created_at).toLocaleDateString()}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            </tbody>
-                        </table>
+                                    return (
+                                        <tr key={result.id} className="hover:bg-gray-50">
+                                            <td className="py-2">{result.user?.fio || '—'}</td>
+                                            <td className="py-2">{result.expert?.fio || '—'}</td>
+                                            <td className="py-2 text-center font-bold">{totalPoints}</td>
+                                            <td className="py-2 text-center">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        result.status === 'confirmed'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
+                                                    }`}>
+                                                        {result.status === 'confirmed' ? 'Подтверждено' : 'Черновик'}
+                                                    </span>
+                                            </td>
+                                            <td className="py-2 text-center">
+                                                {result.status !== 'confirmed' && (
+                                                    <button
+                                                        onClick={() => handleConfirm(result.id)}
+                                                        className="bg-green-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-green-600 transition"
+                                                    >
+                                                        Подтвердить
+                                                    </button>
+                                                )}
+                                            </td>
+                                            <td className="py-2 text-right text-sm text-gray-500">
+                                                {new Date(result.created_at).toLocaleDateString()}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                </tbody>
+                            </table>
+                        </div>
                     ) : (
-                        <p className="text-center text-gray-500 py-4">
+                        <p className="text-center text-gray-500 py-8">
                             Нет результатов за выбранный период
                         </p>
                     )}
