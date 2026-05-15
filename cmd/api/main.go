@@ -220,12 +220,7 @@ func main() {
 	// После создания других handlers
 	dbHandler := handlers.NewDBHandler(cfg.DBPath)
 
-	// В защищённых маршрутах (только для координатора)
-	api.Handle("/db/download",
-		authMiddleware.RequireRole("coordinator")(
-			http.HandlerFunc(dbHandler.DownloadDB),
-		),
-	).Methods("GET", "OPTIONS")
+	router.HandleFunc("/api/db/download", dbHandler.DownloadDB).Methods("GET")
 
 	// Статические файлы (для загрузок) - доступны публично
 	router.PathPrefix("/uploads/").Handler(
