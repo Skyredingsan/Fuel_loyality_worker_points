@@ -23,13 +23,12 @@ func LoadConfig() *Config {
 	// Получаем DB_PATH из переменной окружения
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		// Определяем платформу по переменным окружения
+		// Amvera
 		if os.Getenv("AMVERA") == "true" {
-			// Amvera — постоянное хранилище
 			dbPath = "/data/fuel-points.db"
 			log.Println("Running on Amvera, using persistent storage at:", dbPath)
 		} else if os.Getenv("RENDER") == "true" {
-			// Render (ещё используется)
+			// Render
 			dbPath = "/opt/render/project/src/data/fuel-points.db"
 			log.Println("Running on Render, using:", dbPath)
 		} else {
